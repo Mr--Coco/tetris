@@ -3,6 +3,8 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
 
+static int	status = 1;
+
 typedef struct	s_color
 {
   int		r;
@@ -157,6 +159,8 @@ void		draw_mute_pause_square(SDL_Surface *screen)
 {
   t_point	point;
   t_color	color;
+  SDL_Surface	*image;
+  SDL_Rect	pos;
 
   fill_color(&color, 255, 255, 255);
   fill_point(&point, 440, 360, 440, 460);
@@ -167,6 +171,13 @@ void		draw_mute_pause_square(SDL_Surface *screen)
   draw_horizontal(screen, &point, &color);
   fill_point(&point, 440, 460, 780, 460);
   draw_horizontal(screen, &point, &color);
+  pos.x = 441;
+  pos.y = 361;
+  if (status == 1)
+    image = SDL_LoadBMP("sound_icon.bmp");
+  else if (status == -1)
+    image = SDL_LoadBMP("mute_icon.bmp");
+  SDL_BlitSurface(image, NULL, screen, &pos);
 }
 
 /*
@@ -213,9 +224,6 @@ void		tetris(void)
       exit(EXIT_FAILURE);
     }
   SDL_WM_SetCaption("tetris_sm20", NULL);
-  init_draw(screen);
-
-  SDL_Flip(screen);
   if (Mix_OpenAudio(22050, AUDIO_S16, 2, 4096) == -1)
     {
       printf("%s\n", Mix_GetError());
@@ -226,6 +234,8 @@ void		tetris(void)
   Mix_VolumeMusic(50);
   while (go)
     {
+      init_draw(screen);
+      SDL_Flip(screen);
       SDL_WaitEvent(&event);
       switch (event.type)
 	{
@@ -236,10 +246,13 @@ void		tetris(void)
 	      go = 0;
 	      break;
 	    case SDLK_SPACE:
-	      if (Mix_VolumeMusic(-1) > 0)
-		Mix_VolumeMusic(0);
-	      else
-		Mix_VolumeMusic(volume);
+	      {
+		status *= -1;
+		if (Mix_VolumeMusic(-1) > 0)
+		  Mix_VolumeMusic(0);
+		else
+		  Mix_VolumeMusic(volume);
+	      }
 	      break;
 	    case SDLK_LEFT:
 	      if (volume - 10 > 0)
@@ -248,6 +261,18 @@ void		tetris(void)
 	    case SDLK_RIGHT:
 	      if (volume + 10 < 128)
 		Mix_VolumeMusic((volume = volume + 10));
+	      break;
+	    case SDLK_UP:
+	      {
+		Mix_FreeMusic(music);
+		music = set_music("mario_invicible.wav");
+	      }
+	      break;
+	    case SDLK_DOWN:
+	      {
+		Mix_FreeMusic(music);
+		music = set_music("mario_underwater.wav");
+	      }
 	      break;
 	    }
 	  break;
