@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
+#include <SDL/SDL_image.h>
+#include <SDL/SDL_ttf.h>
 
 static int	status = 1;
+static int	pause = 1;
 
 typedef struct	s_color
 {
@@ -131,10 +134,13 @@ void		draw_next_figure_square(SDL_Surface *screen)
 ** Dessine les 3 lignes de niveau, score, ligne
 */
 
-void		draw_information_square(SDL_Surface *screen)
+void		draw_information_square(SDL_Surface *screen, TTF_Font *police)
 {
   t_point	point;
   t_color	color;
+  SDL_Color	black_color = {255, 255, 255};
+  SDL_Surface	*text;
+  SDL_Rect	pos;
 
   fill_color(&color, 255, 255, 255);
   fill_point(&point, 440, 190, 440, 340);
@@ -149,6 +155,18 @@ void		draw_information_square(SDL_Surface *screen)
   draw_horizontal(screen, &point, &color);
   fill_point(&point, 440, 290, 780, 290);
   draw_horizontal(screen, &point, &color);
+  text = TTF_RenderText_Solid(police, "level", black_color);
+  pos.x = 445;
+  pos.y = 191;
+  SDL_BlitSurface(text, NULL, screen, &pos);
+  text = TTF_RenderText_Solid(police, "score", black_color);
+  pos.x = 445;
+  pos.y = 241;
+  SDL_BlitSurface(text, NULL, screen, &pos);
+  text = TTF_RenderText_Solid(police, "lines", black_color);
+  pos.x = 445;
+  pos.y = 291;
+  SDL_BlitSurface(text, NULL, screen, &pos);
 }
 
 /*
@@ -163,20 +181,27 @@ void		draw_mute_pause_square(SDL_Surface *screen)
   SDL_Rect	pos;
 
   fill_color(&color, 255, 255, 255);
-  fill_point(&point, 440, 360, 440, 460);
+  fill_point(&point, 490, 360, 490, 460);
   draw_vertical(screen, &point, &color);
-  fill_point(&point, 780, 360, 780, 460);
+  fill_point(&point, 710, 360, 710, 460);
   draw_vertical(screen, &point, &color);
-  fill_point(&point, 440, 360, 780, 360);
+  fill_point(&point, 490, 360, 710, 360);
   draw_horizontal(screen, &point, &color);
-  fill_point(&point, 440, 460, 780, 460);
+  fill_point(&point, 490, 460, 710, 460);
   draw_horizontal(screen, &point, &color);
-  pos.x = 441;
+  pos.x = 491;
   pos.y = 361;
   if (status == 1)
     image = SDL_LoadBMP("sound_icon.bmp");
   else if (status == -1)
     image = SDL_LoadBMP("mute_icon.bmp");
+  SDL_BlitSurface(image, NULL, screen, &pos);
+  pos.x = 611;
+  pos.y = 361;
+  if (pause == 1)
+    image = SDL_LoadBMP("pause_off.bmp");
+  else if (pause == -1)
+    image = SDL_LoadBMP("pause_on.bmp");
   SDL_BlitSurface(image, NULL, screen, &pos);
 }
 
@@ -199,13 +224,21 @@ void		draw_logo(SDL_Surface *screen)
 ** Initialise l'affichage
 */
 
-void		init_draw(SDL_Surface *screen)
+void		init_draw(SDL_Surface *screen, TTF_Font *police)
 {
   draw_game_square(screen);
   draw_next_figure_square(screen);
-  draw_information_square(screen);
+  draw_information_square(screen, police);
   draw_mute_pause_square(screen);
   draw_logo(screen);
+}
+
+/*
+** Dessine le menu de pause
+*/
+
+void		draw_pause_menu(SDL_Surface *screen)
+{
 }
 
 void		tetris(void)
@@ -215,15 +248,18 @@ void		tetris(void)
   SDL_Surface	*screen;
   SDL_Event	event;
   Mix_Music	*music;
+  TTF_Font	*police;
 
   go = 1;
   SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+  TTF_Init();
   if ((screen = SDL_SetVideoMode(800, 600, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == NULL)
     {
       printf("video mode failed\n");
       exit(EXIT_FAILURE);
     }
   SDL_WM_SetCaption("tetris_sm20", NULL);
+  police = TTF_OpenFont("arial.ttf", 36);
   if (Mix_OpenAudio(22050, AUDIO_S16, 2, 4096) == -1)
     {
       printf("%s\n", Mix_GetError());
@@ -231,10 +267,10 @@ void		tetris(void)
     }
   music = set_music("tetris.wav");
   volume = Mix_VolumeMusic(-1);
-  Mix_VolumeMusic(50);
+  Mix_VolumeMusic((volume = 50));
   while (go)
     {
-      init_draw(screen);
+      init_draw(screen, police);
       SDL_Flip(screen);
       SDL_WaitEvent(&event);
       switch (event.type)
@@ -276,10 +312,30 @@ void		tetris(void)
 	      break;
 	    }
 	  break;
+	case SDL_MOUSEBUTTONUP:
+	  {
+	    if (event.button.button == SDL_BUTTON_LEFT)
+	      if (event.button.x >= 490 && event.button.x <= 590 && event.button.y >= 360 && event.button.y <= 460)
+		{
+		  status *= -1;
+		  if (Mix_VolumeMusic(-1) > 0)
+		    Mix_VolumeMusic(0);
+		  else
+		    Mix_VolumeMusic(volume);
+		}
+	      else if (event.button.x >= 610 && event.button.x <= 710 && event.button.y >= 360 && event.button.y <= 460)
+		{
+		  pause *= -1;
+		  draw_pause_menu(screen);
+		}
+	  }
+	  break;
 	}
     }
   Mix_FreeMusic(music);
   Mix_CloseAudio();
+  TTF_CloseFont(police);
+  TTF_Quit();
   SDL_Quit();
 }
 

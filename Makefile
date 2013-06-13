@@ -8,7 +8,7 @@ CC	=	gcc
 
 RM	=	rm -f
 
-LIB	=	-lm -lSDL -lSDL_mixer
+LIB	=	-lm -lSDL -lSDL_mixer -lSDL_ttf ##-lSDLmain
 
 $(NAME):	$(OBJ)
 	$(CC) -o $(NAME) $(OBJ) $(LIB)
